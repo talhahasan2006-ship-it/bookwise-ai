@@ -1,12 +1,18 @@
 import os
 import sys
 
-# Ensure project root is in sys.path
+# Ensure project root and backend dir are in sys.path
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+BACKEND_DIR = os.path.abspath(os.path.dirname(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
+if BACKEND_DIR not in sys.path:
+    sys.path.insert(0, BACKEND_DIR)
 
-from backend.app import create_app
+try:
+    from backend.app import create_app
+except ImportError:
+    from app import create_app
 
 app = create_app()
 
