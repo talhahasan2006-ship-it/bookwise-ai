@@ -15,8 +15,14 @@ from backend.app.api import (
 )
 
 def create_app(config_class=Config):
-    dist_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist"))
-    app = Flask(__name__, static_folder=dist_folder, static_url_path="")
+    possible_dist_dirs = [
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist")),
+        os.path.abspath(os.path.join(os.getcwd(), "frontend", "dist")),
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")),
+        os.path.abspath("frontend/dist"),
+    ]
+    dist_folder = next((d for d in possible_dist_dirs if os.path.exists(d)), possible_dist_dirs[0])
+    app = Flask(__name__, static_folder=dist_folder, static_url_path="/")
     app.config.from_object(config_class)
 
     # Enable CORS for frontend Vite development server and production
@@ -50,16 +56,17 @@ def create_app(config_class=Config):
     # Serve built React Single Page Application (SPA)
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
-    def serve_spa(path):
+    def serve_frontend(path):
         if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
             return send_from_directory(app.static_folder, path)
-        if os.path.exists(os.path.join(app.static_folder, 'index.html')):
+        elif os.path.exists(os.path.join(app.static_folder, 'index.html')):
             return send_from_directory(app.static_folder, 'index.html')
-        return jsonify({
-            'application': 'BookWise AI Backend',
-            'status': 'online',
-            'note': 'Frontend dist not built. Run npm run build in frontend/.'
-        })
+        else:
+            return jsonify({
+                'application': 'BookWise AI Backend',
+                'status': 'online',
+                'note': 'Frontend dist not built. Run npm run build in frontend/.'
+            })
 
     # Error Handlers
     @app.errorhandler(404)

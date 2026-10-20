@@ -7,10 +7,8 @@ backend/venv/
 *.db
 backend/app/*.db
 
-# Node / Frontend
+# Node / Dependencies
 node_modules/
 frontend/node_modules/
-frontend/dist/
-dist/
 .DS_Store
 *.log
