@@ -25,14 +25,16 @@ def create_app(config_class=Config):
     # Initialize Database
     db.init_app(app)
 
+    # Wrap DB table creation and warmup in try/except so app always boots on serverless
     with app.app_context():
-        # Create SQLite tables if they do not exist
-        db.create_all()
+        try:
+            db.create_all()
+        except Exception as e:
+            print(f"DB init failed (expected on Vercel if no env): {e}")
 
-        # Load datasets and sync DB
+        # Load datasets and sync DB / warmup engine
         try:
             df_books, df_ratings = load_data(app)
-            # Warm up recommendation engine
             engine.initialize(df_books, df_ratings)
         except Exception as e:
             print(f"Warning during data loading / engine warmup: {e}")

@@ -38,45 +38,47 @@ def load_data(app=None):
     else:
         df_ratings = pd.DataFrame(columns=['user_id', 'book_id', 'rating', 'timestamp'])
 
-    # Sync to SQLite if DB is empty
+    # Sync to SQLite if DB is empty (non-fatal if DB unavailable on serverless)
     if app:
-        with app.app_context():
-            if Book.query.count() == 0:
-                print("Seeding SQLite database with books from CSV...")
-                book_objects = []
-                for _, row in df_books.iterrows():
-                    book = Book(
-                        id=int(row['book_id']),
-                        title=row['title'],
-                        author=row['author'],
-                        genre=row['genre'],
-                        publication_year=int(row['publication_year']),
-                        publisher=row['publisher'],
-                        isbn=row['isbn'],
-                        average_rating=float(row['average_rating']),
-                        rating_count=int(row['rating_count']),
-                        description=row['description'],
-                        cover_url=row['cover_url']
-                    )
-                    book_objects.append(book)
-                db.session.bulk_save_objects(book_objects)
-                db.session.commit()
-                print(f"Successfully seeded {len(book_objects)} books to SQLite.")
+        try:
+            with app.app_context():
+                if Book.query.count() == 0:
+                    print("Seeding SQLite database with books from CSV...")
+                    book_objects = []
+                    for _, row in df_books.iterrows():
+                        book = Book(
+                            id=int(row['book_id']),
+                            title=row['title'],
+                            author=row['author'],
+                            genre=row['genre'],
+                            publication_year=int(row['publication_year']),
+                            publisher=row['publisher'],
+                            isbn=row['isbn'],
+                            average_rating=float(row['average_rating']),
+                            rating_count=int(row['rating_count']),
+                            description=row['description'],
+                            cover_url=row['cover_url']
+                        )
+                        book_objects.append(book)
+                    db.session.bulk_save_objects(book_objects)
+                    db.session.commit()
+                    print(f"Successfully seeded {len(book_objects)} books to SQLite.")
 
-            if Rating.query.count() == 0 and not df_ratings.empty:
-                print("Seeding ratings into SQLite...")
-                rating_objects = []
-                # limit bulk seed for performance
-                for _, row in df_ratings.head(5000).iterrows():
-                    r = Rating(
-                        user_id=int(row['user_id']),
-                        book_id=int(row['book_id']),
-                        rating=float(row['rating']),
-                        timestamp=int(row.get('timestamp', 0)) if pd.notnull(row.get('timestamp')) else None
-                    )
-                    rating_objects.append(r)
-                db.session.bulk_save_objects(rating_objects)
-                db.session.commit()
-                print(f"Successfully seeded {len(rating_objects)} ratings to SQLite.")
+                if Rating.query.count() == 0 and not df_ratings.empty:
+                    print("Seeding ratings into SQLite...")
+                    rating_objects = []
+                    for _, row in df_ratings.head(5000).iterrows():
+                        r = Rating(
+                            user_id=int(row['user_id']),
+                            book_id=int(row['book_id']),
+                            rating=float(row['rating']),
+                            timestamp=int(row.get('timestamp', 0)) if pd.notnull(row.get('timestamp')) else None
+                        )
+                        rating_objects.append(r)
+                    db.session.bulk_save_objects(rating_objects)
+                    db.session.commit()
+                    print(f"Successfully seeded {len(rating_objects)} ratings to SQLite.")
+        except Exception as db_err:
+            print(f"DB seeding/sync skipped (expected if DB unavailable on serverless): {db_err}")
 
     return df_books, df_ratings
